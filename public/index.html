@@ -32,7 +32,7 @@
             --text-main: #e3e3e3;
             --text-sub: #c4c7c5;
             --border-color: #444746;
-            --accent-red: #f2b8b5; /* 暗い背景でも見やすい赤 */
+            --accent-red: #f2b8b5;
             --accent-yellow: #f1c40f;
             --hover-bg: #333537;
             --shadow-color: rgba(0,0,0,0.5);
@@ -46,6 +46,7 @@
             display: flex;
             min-height: 100vh;
             transition: background-color 0.3s, color 0.3s;
+            overflow-x: hidden; /* 横スクロール防止 */
         }
 
         /* --- ヘッダーエリア --- */
@@ -85,11 +86,32 @@
 
         /* --- メインコンテンツ --- */
         .main-content {
-            flex: 1; padding: 80px 40px; max-width: 800px; margin: 0 auto;
-            transition: margin-left 0.3s;
+            flex: 1;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            /* 小画面用にパディングを調整 */
+            padding: 80px 20px 40px; 
+            box-sizing: border-box; /* パディングを含めた幅計算 */
+            transition: margin-left 0.3s cubic-bezier(0.2, 0, 0, 1); /* スムーズな移動 */
+            
+            /* 長い単語でのレイアウト崩れ防止 */
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
+
+        /* PC画面 (幅768px以上) の挙動 */
         @media (min-width: 768px) {
-            .sidebar.active ~ .main-content { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); }
+            /* サイドバーが開いている時、コンテンツを右にずらして重ならないようにする */
+            .sidebar.active ~ .main-content {
+                margin-left: var(--sidebar-width);
+                width: calc(100% - var(--sidebar-width)); /* 幅を再計算してはみ出し防止 */
+            }
+            
+            /* PCでは少し広めのパディング */
+            .main-content {
+                padding: 80px 40px 40px;
+            }
         }
 
         /* --- モーダル (設定用) --- */
@@ -119,7 +141,7 @@
         @media (max-width: 767px) { .overlay.active { display: block; } }
 
         /* --- 汎用スタイル --- */
-        h2 { font-size: 24px; font-weight: 400; color: var(--text-main); margin-bottom: 24px; display: flex; align-items: center; }
+        h2 { font-size: 24px; font-weight: 400; color: var(--text-main); margin-bottom: 24px; display: flex; align-items: center; flex-wrap: wrap; }
         .fav-header-btn { background: none; border: none; cursor: pointer; margin-left: 10px; color: var(--text-sub); font-size: 1.5rem; }
         .fav-header-btn.active { color: var(--accent-yellow); }
 
@@ -145,7 +167,6 @@
             font-size: 14px; font-weight: 500; transition: opacity 0.2s;
         }
         button.action-btn:hover { opacity: 0.9; }
-        /* ダークモード時のボタン文字色調整 */
         [data-theme="dark"] button.action-btn { color: #331200; font-weight: bold; }
 
     </style>
@@ -201,13 +222,11 @@
         const settingsModal = document.getElementById('settings-modal');
         let allToolsData = [];
 
-        // --- テーマ管理機能 ---
         function initTheme() {
             const savedTheme = localStorage.getItem('mtools_theme') || 'system';
             document.getElementById('theme-select').value = savedTheme;
             applyTheme(savedTheme);
 
-            // システム設定の変更を監視
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
                 if (localStorage.getItem('mtools_theme') === 'system') {
                     applyTheme('system');
@@ -222,15 +241,11 @@
 
         function applyTheme(mode) {
             let isDark = false;
-            
             if (mode === 'system') {
                 isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             } else if (mode === 'dark') {
                 isDark = true;
-            } else {
-                isDark = false; // light
             }
-
             if (isDark) {
                 document.documentElement.setAttribute('data-theme', 'dark');
             } else {
@@ -238,23 +253,20 @@
             }
         }
 
-        // --- 設定モーダル ---
         function openSettings() {
             settingsModal.classList.add('active');
-            // スマホならメニューを閉じる
-            if (window.innerWidth < 768) toggleMenu();
+            if (window.innerWidth < 768 && sidebar.classList.contains('active')) {
+                toggleMenu();
+            }
         }
 
         function closeSettings(event) {
-            // イベントがある場合は、オーバーレイクリック時のみ閉じる処理判定をする
             if (event && event.target !== settingsModal && event.target.tagName !== 'BUTTON') return;
             settingsModal.classList.remove('active');
         }
 
-        // --- 初期化 & ナビゲーション ---
         function init() {
-            initTheme(); // テーマ初期化
-
+            initTheme(); 
             if (window.innerWidth >= 768) sidebar.classList.add('active');
             
             loadMenu().then(() => {
@@ -294,8 +306,9 @@
 
         function handleNav(id) {
             loadTool(id);
-            if (window.innerWidth < 768) toggleMenu();
-            
+            if (window.innerWidth < 768 && sidebar.classList.contains('active')) {
+                toggleMenu();
+            }
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('current'));
             const active = document.getElementById(`nav-${id}`);
             if(active) active.classList.add('current');
@@ -320,7 +333,6 @@
                 app.innerHTML = html;
                 executeScripts(app);
 
-                // ヘッダーにお気に入りボタンを追加
                 const header = app.querySelector('h2');
                 if (header) {
                     const favBtn = document.createElement('button');
@@ -402,6 +414,10 @@
         window.addEventListener('resize', () => {
             if (window.innerWidth >= 768 && !sidebar.classList.contains('active')) {
                 sidebar.classList.add('active');
+            }
+            if (window.innerWidth < 768 && sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
             }
         });
     </script>

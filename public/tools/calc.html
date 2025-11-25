@@ -1,37 +1,59 @@
 <h2>電卓</h2>
 <style>
-    /* モダンで丸みを帯びたデザイン */
+    /* レイアウト: 電卓と履歴を横並び（PC）または縦並び（スマホ）にする */
+    .calc-layout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 24px;
+        justify-content: center;
+        align-items: flex-start;
+    }
+
+    /* 電卓本体 */
     .calc-container {
-        max-width: 350px;
-        margin: 0 auto;
+        flex: 0 0 auto;
+        width: 100%;
+        max-width: 320px;
+        background: var(--bg-card); /* テーマ対応 */
+        padding: 20px;
+        border-radius: 24px;
+        box-shadow: 0 4px 15px var(--shadow-color);
+        border: 1px solid var(--border-color);
     }
 
     .calc-display {
         background-color: transparent;
-        padding: 20px 10px;
+        padding: 10px;
         text-align: right;
-        font-size: 3rem;
-        margin-bottom: 20px;
+        margin-bottom: 15px;
         color: var(--text-main);
-        font-weight: 300;
         border-bottom: 1px solid var(--border-color);
-        min-height: 80px;
         word-break: break-all;
+    }
+    .calc-display-sub {
+        font-size: 1rem;
+        color: var(--text-sub);
+        min-height: 1.2em;
+    }
+    .calc-display-main {
+        font-size: 2.5rem;
+        font-weight: 300;
+        min-height: 1.2em;
     }
 
     .calc-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
+        gap: 10px;
     }
     
     .calc-btn {
-        aspect-ratio: 1; /* 正円にする */
+        aspect-ratio: 1;
         border: none;
         border-radius: 50%;
-        background-color: var(--bg-sidebar); /* 薄いグレー */
+        background-color: var(--bg-sidebar);
         color: var(--text-main);
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         cursor: pointer;
         transition: all 0.2s;
         display: flex;
@@ -40,69 +62,261 @@
         box-shadow: 0 2px 5px var(--shadow-color);
     }
 
-    .calc-btn:hover {
-        background-color: var(--hover-bg);
-        transform: translateY(-2px);
-    }
+    .calc-btn:hover { background-color: var(--hover-bg); transform: translateY(-2px); }
+    .calc-btn:active { transform: scale(0.95); }
+
+    .calc-btn.num { font-weight: 500; }
     
-    .calc-btn:active {
-        transform: scale(0.95);
-    }
-
-    /* 数字キー */
-    .calc-btn.num {
-        font-weight: 500;
-    }
-
-    /* 演算子 (アクセントカラー) */
     .calc-btn.op {
         background-color: var(--bg-sidebar);
         color: var(--accent-red);
         font-weight: bold;
-        font-size: 1.8rem;
     }
-    .calc-btn.op:hover {
-        background-color: #fce8e6; /* 薄い赤 */
-    }
-    /* ダークモードでのホバー調整 */
-    [data-theme="dark"] .calc-btn.op:hover {
-        background-color: #3e2723;
-    }
+    .calc-btn.op:hover { background-color: rgba(179, 38, 30, 0.1); }
+    [data-theme="dark"] .calc-btn.op:hover { background-color: rgba(242, 184, 181, 0.1); }
 
-    /* イコールボタン (目立たせる) */
     .calc-btn.eq {
         background-color: var(--accent-red);
         color: #fff;
     }
-    .calc-btn.eq:hover {
-        opacity: 0.9;
-    }
     [data-theme="dark"] .calc-btn.eq { color: #331200; }
 
-    /* クリアボタン */
-    .calc-btn.clear {
-        color: var(--accent-red);
-        font-size: 1.2rem;
+    /* 履歴エリア */
+    .history-container {
+        flex: 1;
+        min-width: 280px;
+        max-width: 400px;
+        background: var(--bg-card);
+        border-radius: 16px;
+        border: 1px solid var(--border-color);
+        max-height: 500px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
+
+    .history-header {
+        padding: 16px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--bg-sidebar);
+        font-weight: bold;
+    }
+    .history-clear-btn {
+        background: none; border: none; cursor: pointer;
+        color: var(--accent-red); font-size: 0.9rem;
+    }
+    .history-clear-btn:hover { text-decoration: underline; }
+
+    .history-list {
+        overflow-y: auto;
+        flex: 1;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+    }
+    .history-item {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: background 0.1s;
+    }
+    .history-item:hover { background-color: var(--hover-bg); }
+    .history-expr { font-size: 0.9rem; color: var(--text-sub); text-align: right; margin-bottom: 4px; }
+    .history-res { font-size: 1.2rem; color: var(--text-main); text-align: right; font-weight: 500; }
 
 </style>
 
-<div class="calc-container">
-    <div class="calc-display" id="calc-display">0</div>
-    <div class="calc-grid">
-        <button class="calc-btn clear" onclick="calcApp.clear()">AC</button>
-        <button class="calc-btn op" onclick="calcApp.setOp('/')">÷</button>
-        <button class="calc-btn op" onclick="calcApp.setOp('*')">×</button>
-        <button class="calc-btn op" onclick="calcApp.backspace()">⌫</button>
+<div class="calc-layout">
+    <div class="calc-container">
+        <div class="calc-display">
+            <div class="calc-display-sub" id="calc-sub"></div>
+            <div class="calc-display-main" id="calc-main">0</div>
+        </div>
+        <div class="calc-grid">
+            <button class="calc-btn clear" onclick="calcApp.clear()">AC</button>
+            <button class="calc-btn op" onclick="calcApp.append('%')">%</button>
+            <button class="calc-btn op" onclick="calcApp.setOp('/')">÷</button>
+            <button class="calc-btn op" onclick="calcApp.backspace()">⌫</button>
 
-        <button class="calc-btn num" onclick="calcApp.append('7')">7</button>
-        <button class="calc-btn num" onclick="calcApp.append('8')">8</button>
-        <button class="calc-btn num" onclick="calcApp.append('9')">9</button>
-        <button class="calc-btn op" onclick="calcApp.setOp('-')">−</button>
-        
-        <button class="calc-btn num" onclick="calcApp.append('4')">4</button>
-        <button class="calc-btn num" onclick="calcApp.append('5')">5</button>
-        <button class="calc-btn num" onclick="calcApp.append('6')">6</button>
-        <button class="calc-btn op" onclick="calcApp.setOp('+')">+</button>
+            <button class="calc-btn num" onclick="calcApp.append('7')">7</button>
+            <button class="calc-btn num" onclick="calcApp.append('8')">8</button>
+            <button class="calc-btn num" onclick="calcApp.append('9')">9</button>
+            <button class="calc-btn op" onclick="calcApp.setOp('*')">×</button>
+            
+            <button class="calc-btn num" onclick="calcApp.append('4')">4</button>
+            <button class="calc-btn num" onclick="calcApp.append('5')">5</button>
+            <button class="calc-btn num" onclick="calcApp.append('6')">6</button>
+            <button class="calc-btn op" onclick="calcApp.setOp('-')">−</button>
 
-        <button class
+            <button class="calc-btn num" onclick="calcApp.append('1')">1</button>
+            <button class="calc-btn num" onclick="calcApp.append('2')">2</button>
+            <button class="calc-btn num" onclick="calcApp.append('3')">3</button>
+            <button class="calc-btn op" onclick="calcApp.setOp('+')">+</button>
+            
+            <button class="calc-btn num" onclick="calcApp.append('0')">0</button>
+            <button class="calc-btn num" onclick="calcApp.append('00')">00</button>
+            <button class="calc-btn num" onclick="calcApp.append('.')">.</button>
+            <button class="calc-btn eq" onclick="calcApp.calc()">=</button>
+        </div>
+    </div>
+
+    <div class="history-container">
+        <div class="history-header">
+            <span>計算履歴</span>
+            <button class="history-clear-btn" onclick="calcApp.clearHistory()">削除</button>
+        </div>
+        <ul class="history-list" id="history-list">
+            <li style="padding:20px; text-align:center; color:var(--text-sub);">履歴なし</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    var calcApp = {
+        current: '', 
+        prev: '', 
+        op: null,
+        history: [],
+
+        init: function() {
+            // ローカルストレージから履歴読み込み
+            try {
+                const saved = localStorage.getItem('mtools_calc_history');
+                if (saved) this.history = JSON.parse(saved);
+            } catch(e) {}
+            this.renderHistory();
+        },
+
+        append: function(n) {
+            if (n === '.' && this.current.includes('.')) return;
+            // 00の処理
+            if (n === '00' && (this.current === '' || this.current === '0')) return;
+            if (this.current === '0' && n !== '.') this.current = '';
+            
+            // %の処理: 即時計算 (現在の値を1/100にする)
+            if (n === '%') {
+                if (this.current === '') return;
+                this.current = String(parseFloat(this.current) / 100);
+                this.update();
+                return;
+            }
+
+            this.current += n;
+            this.update();
+        },
+
+        setOp: function(op) {
+            if (this.current === '') {
+                if(this.prev !== '') {
+                    this.op = op; 
+                    this.updateSub();
+                }
+                return;
+            }
+            if (this.prev !== '') this.calc(true); // 続けて計算する場合
+            
+            this.op = op;
+            this.prev = this.current;
+            this.current = '';
+            this.updateSub();
+        },
+
+        calc: function(isContinuous = false) {
+            const p = parseFloat(this.prev);
+            const c = parseFloat(this.current);
+            if (isNaN(p) || isNaN(c)) return;
+            
+            let res = 0;
+            switch(this.op) {
+                case '+': res = p + c; break;
+                case '-': res = p - c; break;
+                case '*': res = p * c; break;
+                case '/': res = p / c; break;
+            }
+            
+            // 誤差対策
+            res = Math.round(res * 1000000000) / 1000000000;
+            const resStr = String(res);
+
+            // 履歴に追加 (連続計算の途中じゃなければ)
+            if (!isContinuous) {
+                this.addHistory(`${this.prev} ${this.op} ${this.current} =`, resStr);
+            }
+
+            this.current = resStr;
+            this.op = null;
+            this.prev = '';
+            this.update();
+            this.updateSub(); // サブディスプレイ（演算子表示）をクリア
+        },
+
+        clear: function() {
+            this.current = ''; this.prev = ''; this.op = null;
+            this.update(); this.updateSub();
+        },
+
+        backspace: function() {
+            this.current = this.current.slice(0, -1);
+            this.update();
+        },
+
+        update: function() {
+            const d = document.getElementById('calc-main');
+            if(d) d.innerText = this.current || '0';
+        },
+
+        updateSub: function() {
+            const d = document.getElementById('calc-sub');
+            if(d) d.innerText = this.op ? `${this.prev} ${this.op}` : '';
+        },
+
+        // --- 履歴機能 ---
+        addHistory: function(expression, result) {
+            this.history.unshift({ expr: expression, res: result });
+            if (this.history.length > 20) this.history.pop(); // 最大20件
+            this.saveHistory();
+            this.renderHistory();
+        },
+
+        clearHistory: function() {
+            if(confirm('履歴をすべて削除しますか？')) {
+                this.history = [];
+                this.saveHistory();
+                this.renderHistory();
+            }
+        },
+
+        saveHistory: function() {
+            localStorage.setItem('mtools_calc_history', JSON.stringify(this.history));
+        },
+
+        renderHistory: function() {
+            const list = document.getElementById('history-list');
+            if (!list) return;
+            list.innerHTML = '';
+
+            if (this.history.length === 0) {
+                list.innerHTML = '<li style="padding:20px; text-align:center; color:var(--text-sub);">履歴なし</li>';
+                return;
+            }
+
+            this.history.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'history-item';
+                li.innerHTML = `<div class="history-expr">${item.expr}</div><div class="history-res">${item.res}</div>`;
+                li.onclick = () => {
+                    // 履歴をクリックしたらその値を入力
+                    this.current = item.res;
+                    this.update();
+                };
+                list.appendChild(li);
+            });
+        }
+    };
+
+    // 初期化
+    calcApp.init();
+</script>

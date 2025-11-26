@@ -11,40 +11,41 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/api/tools', (req, res) => {
     const toolsDir = path.join(__dirname, 'public', 'tools');
 
-    // toolsフォルダが存在しない場合は作成
     if (!fs.existsSync(toolsDir)){
         fs.mkdirSync(toolsDir);
         return res.json([]);
     }
 
-    fs.readdir(toolsDir, (err, files) => {
+    // ディレクトリをスキャン (withFileTypes: true でディレクトリ判定を容易に)
+    fs.readdir(toolsDir, { withFileTypes: true }, (err, entries) => {
         if (err) {
             return res.status(500).json({ error: 'Failed to scan tools directory' });
         }
 
         const tools = [];
-        files.forEach(file => {
-            if (path.extname(file) === '.html') {
-                const filePath = path.join(toolsDir, file);
-                // ファイルの中身を読み込む
-                const content = fs.readFileSync(filePath, 'utf-8');
-                
-                // <h2>タグの中身を正規表現で抽出
-                // <h2 ... > ... </h2> の中身を取得 (改行や属性があっても対応)
-                const h2Match = content.match(/<h2[^>]*>\s*(.*?)\s*<\/h2>/i);
-                
-                let title = file.replace('.html', ''); // デフォルトはファイル名
-                
-                // h2タグが見つかれば、その中身をタイトルにする
-                if (h2Match && h2Match[1]) {
-                    title = h2Match[1].trim();
+        entries.forEach(entry => {
+            // ディレクトリであり、その中に index.html がある場合のみツールとみなす
+            if (entry.isDirectory()) {
+                const toolId = entry.name; // フォルダ名をIDとする (例: calc)
+                const indexPath = path.join(toolsDir, toolId, 'index.html');
+
+                if (fs.existsSync(indexPath)) {
+                    const content = fs.readFileSync(indexPath, 'utf-8');
+                    
+                    // <h2>タグからタイトル抽出
+                    const h2Match = content.match(/<h2[^>]*>\s*(.*?)\s*<\/h2>/i);
+                    let title = toolId;
+                    if (h2Match && h2Match[1]) {
+                        title = h2Match[1].trim();
+                    }
+                    
+                    tools.push({
+                        id: toolId,
+                        name: title,
+                        // ファイルパスではなく、アクセス用のベースパス情報などを持たせてもよいが
+                        // ここでは app.js 側で `/tools/{id}/index.html` を推測させるためシンプルに返す
+                    });
                 }
-                
-                tools.push({
-                    id: file.replace('.html', ''),
-                    name: title,
-                    file: file
-                });
             }
         });
         res.json(tools);

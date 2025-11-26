@@ -83,15 +83,18 @@ function handleNav(id) {
 async function loadTool(toolId) {
     window.location.hash = toolId;
     if (toolId === 'home') { renderHome(); return; }
+
     try {
-        const tool = allToolsData.find(t => t.id === toolId);
-        const path = tool ? `/tools/${tool.file}` : `/tools/${toolId}.html`;
+        // 変更点: ツールごとのフォルダ内の index.html を読み込む
+        const path = `/tools/${toolId}/index.html`;
+        
         const res = await fetch(path);
         if (!res.ok) throw new Error('Tool not found');
         const html = await res.text();
         app.innerHTML = html;
         executeScripts(app);
 
+        // ヘッダーにお気に入りボタンを追加
         const header = app.querySelector('h2');
         if (header) {
             const favBtn = document.createElement('button');
@@ -105,6 +108,7 @@ async function loadTool(toolId) {
             header.appendChild(favBtn);
         }
     } catch (e) {
+        console.error(e);
         app.innerHTML = `<p>ページが見つかりません。</p><button class="action-btn" onclick="handleNav('home')">ホームへ戻る</button>`;
     }
 }

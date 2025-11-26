@@ -1,22 +1,71 @@
 <link rel="stylesheet" href="/tools/base/style.css">
 <h2>進数変換</h2>
-<div>
-    <label class="base-label">入力数値</label>
-    <input type="text" id="base-input" placeholder="数値を入力">
-    <div class="base-select-group">
-        <div style="flex: 1;">
-            <label class="base-label">変換元</label>
-            <select id="base-from"><option value="10">10進数</option><option value="2">2進数</option><option value="8">8進数</option><option value="16">16進数</option></select>
+
+<div class="base-container">
+    <div class="base-input-section">
+        <div class="base-row">
+            <div class="base-col-grow">
+                <label class="base-label">数値入力</label>
+                <input type="text" id="base-input" placeholder="-1, FF, 10.5, 0.101..." oninput="handleInputChange()">
+            </div>
+            
+            <div class="base-col-fixed">
+                <label class="base-label">入力の基数</label>
+                <select id="base-input-radix-select" onchange="handleInputUI('radix')">
+                    <option value="10" selected>10進数</option>
+                    <option value="16">16進数</option>
+                    <option value="2">2進数</option>
+                    <option value="8">8進数</option>
+                    <option value="custom">入力する...</option>
+                </select>
+                <input type="number" id="base-input-radix-custom" class="custom-input hidden" value="10" min="2" max="36" oninput="convertBase()" placeholder="基数">
+            </div>
         </div>
-        <div style="flex: 1;">
-            <label class="base-label">変換先</label>
-            <select id="base-to"><option value="2">2進数</option><option value="8">8進数</option><option value="10">10進数</option><option value="16">16進数</option></select>
+
+        <div class="base-row">
+            <div class="base-col-grow">
+                <label class="base-label">ビット数 (Bit Width)</label>
+                <div class="input-group-row">
+                    <select id="base-bits-select" onchange="handleInputUI('bits')">
+                        <option value="0" id="opt-bits-auto" selected>指定なし (自動)</option>
+                        <option value="8">8-bit</option>
+                        <option value="16">16-bit</option>
+                        <option value="32">32-bit</option>
+                        <option value="64">64-bit</option>
+                        <option value="custom">入力する...</option>
+                    </select>
+                    <input type="number" id="base-bits-custom" class="custom-input hidden" min="0" step="1" oninput="convertBase()" placeholder="ビット数">
+                </div>
+            </div>
+            
+            <div class="base-col-fixed" style="width: auto; min-width: 180px;">
+                <label class="base-label">符号 (補数表示)</label>
+                <div class="toggle-container">
+                    <span class="toggle-label-off">OFF</span>
+                    <label class="switch">
+                        <input type="checkbox" id="sign-toggle" onchange="handleSignModeChange()">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label-on">ON</span>
+                </div>
+                <div class="desc-text" style="margin-top:4px; font-size:0.75rem;">ONで2の補数表現<br>(小数は対象外)</div>
+            </div>
         </div>
     </div>
-    <button class="action-btn" onclick="convertBase()">変換する</button>
-    <div class="base-result-area">
-        <span style="color:#666;">結果:</span>
-        <div id="base-result" class="base-result-val">-</div>
+
+    <div class="base-custom-section">
+        <label class="base-label">出力する基数を追加</label>
+        <div class="base-row-tight">
+            <input type="number" id="custom-radix" placeholder="例: 32" min="2" max="36">
+            <button class="action-btn small" onclick="addCustomBase()">追加</button>
+        </div>
+    </div>
+
+    <div class="base-results-section">
+        <h3>変換結果</h3>
+        <div class="base-result-list" id="result-list">
+            </div>
     </div>
 </div>
+
 <script src="/tools/base/script.js"></script>

@@ -83,12 +83,12 @@ var calcApp = {
 
     update: function() {
         const d = document.getElementById('calc-main');
-        if(d) d.innerText = this.current || '0';
+        if(d) d.textContent = this.current || '0'; // innerText/textContentを使用
     },
 
     updateSub: function() {
         const d = document.getElementById('calc-sub');
-        if(d) d.innerText = this.op ? `${this.prev} ${this.op}` : '';
+        if(d) d.textContent = this.op ? `${this.prev} ${this.op}` : ''; // innerText/textContentを使用
     },
 
     addHistory: function(expression, result) {
@@ -113,17 +113,34 @@ var calcApp = {
     renderHistory: function() {
         const list = document.getElementById('history-list');
         if (!list) return;
-        list.innerHTML = '';
+        list.innerHTML = ''; // リストのクリアはOK
 
         if (this.history.length === 0) {
-            list.innerHTML = '<li style="padding:20px; text-align:center; color:var(--text-sub);">履歴なし</li>';
+            const li = document.createElement('li');
+            li.style.padding = '20px';
+            li.style.textAlign = 'center';
+            li.style.color = 'var(--text-sub)';
+            li.textContent = '履歴なし';
+            list.appendChild(li);
             return;
         }
 
         this.history.forEach(item => {
             const li = document.createElement('li');
             li.className = 'history-item';
-            li.innerHTML = `<div class="history-expr">${item.expr}</div><div class="history-res">${item.res}</div>`;
+
+            // 【修正】innerHTMLを使わず、createElementとtextContentで安全に構築
+            const divExpr = document.createElement('div');
+            divExpr.className = 'history-expr';
+            divExpr.textContent = item.expr;
+
+            const divRes = document.createElement('div');
+            divRes.className = 'history-res';
+            divRes.textContent = item.res;
+
+            li.appendChild(divExpr);
+            li.appendChild(divRes);
+
             li.onclick = () => {
                 this.current = item.res;
                 this.update();

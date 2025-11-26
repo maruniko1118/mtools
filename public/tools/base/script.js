@@ -13,31 +13,25 @@ function init() {
     convertBase();
 }
 
-// 入力値変更時のハンドラ (修正: 10進数時のみ自動切替)
 function handleInputChange() {
     const inputStr = document.getElementById('base-input').value.trim();
     const toggle = document.getElementById('sign-toggle');
     
-    // 現在の入力基数を取得
     const radixSelect = document.getElementById('base-input-radix-select');
     let inputRadix = (radixSelect.value === 'custom') 
         ? parseInt(document.getElementById('base-input-radix-custom').value) 
         : parseInt(radixSelect.value);
     
-    // 基数が取得できない、または範囲外の場合はデフォルト10とみなす（convertBaseのロジックに合わせる）
     if (isNaN(inputRadix) || inputRadix < 2 || inputRadix > 36) inputRadix = 10;
 
-    // 10進数の場合のみ、符号による自動トグルを行う
     if (inputRadix === 10) {
         if (inputStr.startsWith('-')) {
-            // 負数入力: 自動でON (補数モード)
             if (!toggle.checked) {
                 saveCurrentBitsSetting(false);
                 toggle.checked = true;
                 updateBitsUI(); 
             }
         } else {
-            // 正数入力: 自動でOFF
             if (toggle.checked) {
                 saveCurrentBitsSetting(true);
                 toggle.checked = false;
@@ -159,9 +153,7 @@ function convertBase() {
             let resultStr = "";
 
             // --- 整数部の処理 ---
-            
             if (isFractional) {
-                // 小数モード: 補数処理なし
                 let displayIntVal = intVal;
                 if (!isComplementMode && bitWidth > 0) {
                     let absVal = intVal < 0n ? -intVal : intVal;
@@ -172,9 +164,7 @@ function convertBase() {
                 resultStr = displayIntVal.toString(radix).toUpperCase();
 
             } else {
-                // 整数のみモード
                 if (isComplementMode) {
-                    // 【符号あり(補数)モード】
                     let effectiveWidth = bitWidth;
                     if (effectiveWidth === 0) {
                         if (intVal < 0n) {
@@ -182,15 +172,14 @@ function convertBase() {
                             while (intVal < -(1n << (w - 1n))) w += 8n;
                             effectiveWidth = Number(w);
                         } else {
-                            effectiveWidth = 8; // デフォルト
+                            effectiveWidth = 8;
                         }
                     }
 
                     const mask = (1n << BigInt(effectiveWidth)) - 1n;
-                    let maskedVal = intVal & mask; // 補数表現(Unsigned)
+                    let maskedVal = intVal & mask;
 
                     if (radix === 10) {
-                        // 10進数の場合: 符号付き整数として表示
                         const msb = 1n << BigInt(effectiveWidth - 1);
                         if ((maskedVal & msb) !== 0n) {
                             let signedVal = maskedVal - (1n << BigInt(effectiveWidth));
@@ -199,10 +188,8 @@ function convertBase() {
                             resultStr = maskedVal.toString(10);
                         }
                     } else {
-                        // 2, 8, 16進数などは補数表現(Unsigned)のまま
                         resultStr = maskedVal.toString(radix).toUpperCase();
                         
-                        // ゼロ埋め
                         const bitsPerDigit = Math.log2(radix);
                         if (Number.isInteger(bitsPerDigit)) {
                             const len = Math.ceil(effectiveWidth / bitsPerDigit);
@@ -211,7 +198,6 @@ function convertBase() {
                     }
 
                 } else {
-                    // 【符号なし(マイナス)モード】
                     if (bitWidth > 0) {
                         const mask = (1n << BigInt(bitWidth)) - 1n;
                         let masked = intVal & mask;
@@ -236,7 +222,6 @@ function convertBase() {
                 }
             }
 
-            // フォーマット (2進数 4桁区切り)
             if (radix === 2) {
                 const parts = resultStr.split('.');
                 let intPart = parts[0];
@@ -261,7 +246,12 @@ function convertBase() {
 
     } catch (e) {
         console.error(e);
-        resultList.innerHTML = `<div style="color:var(--accent-red); padding:10px;">エラー: 無効な値です</div>`;
+        // 【修正】エラー表示を安全に
+        const div = document.createElement('div');
+        div.style.color = 'var(--accent-red)';
+        div.style.padding = '10px';
+        div.textContent = 'エラー: 無効な値です';
+        resultList.appendChild(div);
     }
 }
 
@@ -323,23 +313,46 @@ function convertFractionPart(val, radix) {
     return str;
 }
 
+// 【修正】安全なDOM構築に変更
 function addResultRow(container, radix, value) {
     const row = document.createElement('div');
     row.className = 'result-row';
+    
     let label = `${radix}進数`;
     if (radix === 10) label = "10進数";
     if (radix === 16) label = "16進数";
     if (radix === 2) label = "2進数";
     if (radix === 8) label = "8進数";
 
-    row.innerHTML = `
-        <div class="result-label">${label}</div>
-        <div class="result-value">${value}</div>
-        <div class="result-actions">
-            <button class="copy-btn" onclick="copyToClipboard(this, '${value.replace(/\s/g, '')}')">コピー</button>
-            <button class="remove-btn" onclick="removeResult(${radix})" title="削除">✕</button>
-        </div>
-    `;
+    const divLabel = document.createElement('div');
+    divLabel.className = 'result-label';
+    divLabel.textContent = label;
+
+    const divValue = document.createElement('div');
+    divValue.className = 'result-value';
+    divValue.textContent = value;
+
+    const divActions = document.createElement('div');
+    divActions.className = 'result-actions';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.textContent = 'コピー';
+    copyBtn.onclick = function() { copyToClipboard(this, value.replace(/\s/g, '')); };
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.title = '削除';
+    removeBtn.textContent = '✕';
+    removeBtn.onclick = function() { removeResult(radix); };
+
+    divActions.appendChild(copyBtn);
+    divActions.appendChild(removeBtn);
+
+    row.appendChild(divLabel);
+    row.appendChild(divValue);
+    row.appendChild(divActions);
+
     container.appendChild(row);
 }
 
